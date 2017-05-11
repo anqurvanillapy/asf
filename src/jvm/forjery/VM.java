@@ -3,7 +3,7 @@ import java.nio.charset.*;
 import java.util.*;
 
 enum TkType {
-    Num, Pop, Sstk
+    Num, Pop, Sstk, Add, Sub, Mul, Div
 }
 
 class Token {
@@ -102,27 +102,32 @@ public class VM {
         rw = new HashMap<String, TkType>();
         rw.put(".", TkType.Pop);
         rw.put(".s", TkType.Sstk);
+        rw.put("+", TkType.Add);
+        rw.put("-", TkType.Sub);
+        rw.put("*", TkType.Mul);
+        rw.put("/", TkType.Div);
 
         // Start lexical analysis.
         Lexer lexer = new Lexer(br, rw);
         e = lexer.scan();
 
         // Run.
-        Token tk;
-        s = new LinkedList<Integer>();
+        int a, b;                       // temps
+        Token tk;                       // current token
+        s = new LinkedList<Integer>();  // init stack
 
         while (e.size() != 0) {
             tk = e.removeLast();
             switch (tk.getType()) {
-                case Num:
-                    s.push(tk.getValue());
-                    break;
-                case Pop:
-                    s.pop();
-                    break;
+                case Num: s.push(tk.getValue()); break;
+                case Pop: s.pop(); break;
                 case Sstk:
                     System.out.println("HEAD" + Arrays.toString(s.toArray()));
                     break;
+                case Add: s.push(s.pop() + s.pop()); break;
+                case Mul: s.push(s.pop() * s.pop()); break;
+                case Sub: a = s.pop(); b = s.pop(); s.push(b - a); break;
+                case Div: a = s.pop(); b = s.pop(); s.push(b / a); break;
                 default:
                     System.err.println("Invalid token tk=" + tk.getType() +
                             " val=" + tk.getValue());
