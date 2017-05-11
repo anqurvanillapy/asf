@@ -21,32 +21,46 @@ class Token {
 
 class Lexer {
     private Reader r;
+    private HashMap<String, TkType> rw;
     private LinkedList<Token> e;
 
-    public Lexer(Reader r) {
+    public Lexer(Reader r, HashMap<String, TkType> rw) {
         this.r = r;
+        this.rw = rw;
         this.e = new LinkedList<Token>();
     }
 
     public LinkedList<Token> scan() throws IOException {
         int t,              // temp
             row, col;       // line and column
-        char p, lp;         // source code position
+        String buf;         // identifier buffer
+        char p;             // source current position
         TkType ty; int val; // current token
 
-        ty = TkType.Num; val = 0;
+        buf = ""; ty = TkType.Num; val = 0;
         for (row = col = 1; (t = r.read()) > -1; ++col) {
             p = (char) t;
 
-            if      (p >= '0' && p <= '9') {
+            // Re-initialize for every character.
+            ty = TkType.Num; val = 0;
+            if (p >= '0' && p <= '9') {
                 ty = TkType.Num;
                 val = Character.getNumericValue(p);
-            }
-            else if (p == '.') { ty = TkType.Pop; val = p; }
-            else if (p == 'S') { ty = TkType.Sstk; val = p; }
-            else if (p == ' ') continue;
-            else if (p == '\n') { ++row; col = 1; continue; }
-            else {
+            } else if (p > 32 && p < 127) {
+                buf += p;
+                continue;
+            } else if (p == ' ' || p == '\n') {
+                if (buf.equals("")) continue;
+
+                if ( (ty = rw.get(buf)) == null) {
+                    System.err.println(row + ":" + col +
+                                       " Invalid identifier \"" + buf + "\"");
+                    System.exit(1);
+                }
+
+                if (p == '\n') { ++row; col = 1; }
+                buf = "";
+            } else {
                 System.err.println(row + ":" + col +
                                    " Invalid token \"" + p + "\"");
                 System.exit(1);
@@ -63,9 +77,10 @@ class Parser {}
 
 public class VM {
     private static String usage = "Usage: forjery file";
+    private static HashMap<String, TkType> rw;  // reserved words
     // TODO: Reserved words HashMap/HashSet.
 
-    private static LinkedList<Token> e;   // emitted code
+    private static LinkedList<Token> e;         // emitted code
     // TODO: Heterogeneous stack, not only for Integers.
     private static LinkedList<Integer> s;       // stack
 
@@ -82,8 +97,13 @@ public class VM {
                                 new File(args[0])),
                             Charset.defaultCharset()));
 
-        // Lexer.
-        Lexer lexer = new Lexer(br);
+        // Initialize reserved words table.
+        rw = new HashMap<String, TkType>();
+        rw.put(".", TkType.Pop);
+        rw.put(".s", TkType.Sstk);
+
+        // Start lexical analysis.
+        Lexer lexer = new Lexer(br, rw);
         e = lexer.scan();
 
         // Run.
