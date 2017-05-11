@@ -43,26 +43,30 @@ class Lexer {
 
             // Re-initialize for every character.
             ty = TkType.Num; val = 0;
-            if (p >= '0' && p <= '9') {
                 ty = TkType.Num;
                 val = Character.getNumericValue(p);
-            } else if (p > 32 && p < 127) {
+            if (p > 32 && p < 127) {    // whitespace is 31
                 buf += p;
                 continue;
             } else if (p == ' ' || p == '\n') {
                 if (buf.equals("")) continue;
 
                 if ( (ty = rw.get(buf)) == null) {
-                    System.err.println(row + ":" + col +
-                                       " Invalid identifier \"" + buf + "\"");
-                    System.exit(1);
+                    try {
+                        val = Integer.parseInt(buf);
+                        ty = TkType.Num;
+                    } catch (NumberFormatException e) {
+                        System.err.println(row + ":" + col +
+                                " Invalid identifier \"" + buf + "\"");
+                        System.exit(1);
+                    }
                 }
 
                 if (p == '\n') { ++row; col = 1; }
                 buf = "";
             } else {
                 System.err.println(row + ":" + col +
-                                   " Invalid token \"" + p + "\"");
+                        " Invalid token \"" + p + "\"");
                 System.exit(1);
             }
 
@@ -73,12 +77,9 @@ class Lexer {
     }
 }
 
-class Parser {}
-
 public class VM {
     private static String usage = "Usage: forjery file";
     private static HashMap<String, TkType> rw;  // reserved words
-    // TODO: Reserved words HashMap/HashSet.
 
     private static LinkedList<Token> e;         // emitted code
     // TODO: Heterogeneous stack, not only for Integers.
@@ -124,7 +125,7 @@ public class VM {
                     break;
                 default:
                     System.err.println("Invalid token tk=" + tk.getType() +
-                                       " val=" + tk.getValue());
+                            " val=" + tk.getValue());
             }
         }
     }
